@@ -10,7 +10,7 @@ It **drafts but never sends**. The only email it ever sends is the digest, to yo
 
 ## How it works
 
-1. **Read alerts.** Unread emails labeled `JobAlerts` in your Gmail are parsed into jobs (title, company, location, LinkedIn job ID). Jobs already seen are skipped before any cost.
+1. **Read alerts.** Unread emails labeled `JobAlerts` in your Gmail are parsed into jobs (title, company, location, LinkedIn job ID). Jobs already seen are skipped before any cost. Only the jobs **listed in the email** are processed. LinkedIn shows about 6 per alert even when it says "30+ new jobs", and the pipeline doesn't follow the "See all jobs" link. Narrow alerts are how you get coverage (see setup step 3).
 2. **Find the real posting.** The pipeline checks the company's public job list on Greenhouse, Lever, or Ashby first. This costs nothing and needs no search. It learns which companies use which list (`data/boards.json`). Otherwise Claude searches the web for the official posting, and every link is checked to make sure it actually loads.
 3. **Filter.** Hard rules from `config/criteria.yaml` run in code: remote only, US only, a home-state residency rule, a pay floor, title words, and agency tagging. Hourly pay is converted to annual.
 4. **Score.** Claude scores fit from 0 to 100 against your resume, using a rubric that separates minor, learnable gaps from major ones.
