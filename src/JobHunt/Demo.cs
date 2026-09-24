@@ -28,12 +28,12 @@ public static class Demo
             Research = new Research
             {
                 Contacts = [
-                    new Contact { Name = "Sam Rivera", Title = "Technical Recruiter", Role = "recruiter", Linkedin = "https://www.linkedin.com/", Source = "https://example.com/team", Confidence = "high" },
-                    new Contact { Name = "Priya Nair", Title = "Engineering Manager, Platform", Role = "hiring_manager", Linkedin = "https://www.linkedin.com/", Source = "https://example.com/blog", Confidence = "low" },
+                    new Contact { Name = "Jordan Placeholder", Title = "Technical Recruiter", Role = "recruiter", Linkedin = "https://www.linkedin.com/", Source = "https://example.com/team", Confidence = "high" },
+                    new Contact { Name = "Casey Example", Title = "Engineering Manager, Platform", Role = "hiring_manager", Linkedin = "https://www.linkedin.com/", Source = "https://example.com/blog", Confidence = "low" },
                 ],
                 InterviewLoop = [new LoopDetail { Detail = "Recruiter screen, then a system design round and a pairing session (per the engineering blog)", Source = "https://example.com/blog/hiring" }],
             },
-            Draft = "Hi Sam, I saw the Senior Backend Engineer role on the telemetry team. I led a rewrite of our ingestion APIs in .NET that cut p95 latency by 60%, which sounds close to what this team is building. Is the role focused on the ingestion side or the query APIs?",
+            Draft = "Hi Jordan, I saw the Senior Backend Engineer role on the telemetry team. I led a rewrite of our ingestion APIs in .NET that cut p95 latency by 60%, which sounds close to what this team is building. Is the role focused on the ingestion side or the query APIs?",
             Applicants = "46 applicants",
         };
         lead.DraftTo = lead.Research.Contacts[0];
