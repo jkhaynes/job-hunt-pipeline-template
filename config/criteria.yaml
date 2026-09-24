@@ -1,0 +1,34 @@
+# Everything that decides which roles reach your digest. Edit freely.
+
+hard:
+  # Deterministic rules, enforced in code (no model call).
+  remote: fully_remote          # reject hybrid and onsite ("any" to allow everything)
+  us_only: true                 # reject roles the posting says must be based outside the US
+  home_state: ""                # two-letter state (e.g. MI); rejects roles that require living elsewhere
+  min_salary: 150000            # reject if the top of the band is below this (annual USD)
+  unknown_salary: keep          # keep but flag when pay is not posted (or "drop")
+  exclude_title_words: [intern, junior, "data engineer"]
+  # Recruiting agencies and repost sites: kept, tagged "Agency repost", and never searched for.
+  agencies: [jobgether, remotehunter, lensa, dice, cybercoders, "insight global", teksystems,
+             "robert half", "motion recruitment", "jobs via dice", hirenza, crossover]
+
+preferences:
+  # Judgment calls, fed to the scoring prompt as written. Plain English works best.
+  primary_stack: [C#, .NET, ASP.NET Core, SQL Server]
+  bonus_stack: [Azure, AWS, TypeScript]
+  avoid: >
+    Roles centered on ETL, data pipelines, or BI reporting.
+  like: >
+    Senior backend or full stack roles. Tech lead scope.
+
+linkedin:
+  # OFF by default. When true, the pipeline makes one logged-out request per new role to
+  # LinkedIn's public job page: closed jobs are filtered before any lookup, and Easy Apply roles
+  # (or roles with no findable posting) are scored from LinkedIn's description.
+  # LinkedIn's terms prohibit automated access, logged in or not. Turning this on is your call.
+  check_job_page: false
+
+scoring:
+  min_score_to_research: 60     # 0 to 100; at or above gets research and a full card
+  near_miss_min: 50             # between this and the research bar: listed as a near miss
+  max_roles_per_digest: 12

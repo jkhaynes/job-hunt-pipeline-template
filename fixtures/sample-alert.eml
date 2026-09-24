@@ -1,0 +1,39 @@
+From: LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>
+To: you@example.com
+Subject: "Senior .NET Engineer": Example Robotics - Senior Backend Engineer (.NET) posted on 9/22/26
+Date: Tue, 22 Sep 2026 13:28:53 +0000
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<!-- A synthetic alert that mirrors LinkedIn's Sep 2026 job card layout: a logo link, an outer link
+     wrapping the card, an inner title link, and a "Company · Location" line. Companies and job IDs
+     are fictional. Run: dotnet run --project src/JobHunt -- --parse-only fixtures -->
+<html><body>
+<p>30+ new jobs match your preferences</p>
+<table>
+<tr><td>
+  <a href="https://www.linkedin.com/comm/jobs/view/1000000001/?trk=logo"><img alt="Example Robotics" width="48" height="48"></a>
+  <a href="https://www.linkedin.com/comm/jobs/view/1000000001/?trk=card"><table><tbody>
+    <tr><td><a href="https://www.linkedin.com/comm/jobs/view/1000000001/?trk=title" class="font-bold"> Senior Backend Engineer (.NET) </a></td></tr>
+    <tr><td><p> Example Robotics · United States (Remote) </p></td></tr>
+    <tr><td>Actively recruiting</td></tr>
+  </tbody></table></a>
+</td></tr>
+<tr><td>
+  <a href="https://www.linkedin.com/comm/jobs/view/1000000002/?trk=logo"><img alt="Contoso Health" width="48" height="48"></a>
+  <a href="https://www.linkedin.com/comm/jobs/view/1000000002/?trk=card"><table><tbody>
+    <tr><td><a href="https://www.linkedin.com/comm/jobs/view/1000000002/?trk=title" class="font-bold"> Staff Software Engineer, Platform </a></td></tr>
+    <tr><td><p> Contoso Health · Austin, TX (Remote) </p></td></tr>
+    <tr><td>Easy Apply</td></tr>
+  </tbody></table></a>
+</td></tr>
+<tr><td>
+  <a href="https://www.linkedin.com/comm/jobs/view/1000000003/?trk=logo"><img alt="Fabrikam Finance" width="48" height="48"></a>
+  <a href="https://www.linkedin.com/comm/jobs/view/1000000003/?trk=card"><table><tbody>
+    <tr><td><a href="https://www.linkedin.com/comm/jobs/view/1000000003/?trk=title" class="font-bold"> Junior .NET Developer </a></td></tr>
+    <tr><td><p> Fabrikam Finance · Chicago, IL (Hybrid) </p></td></tr>
+  </tbody></table></a>
+</td></tr>
+</table>
+<a href="https://www.linkedin.com/comm/jobs/search-results/?keywords=senior%20.net">See all jobs</a>
+</body></html>

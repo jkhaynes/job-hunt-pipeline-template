@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job digest {{date}}</title>
+<style>
+/* Dark mauve and pink, always dark regardless of system setting. */
+:root {
+  color-scheme: dark;
+  --bg: #1A141F; --surface: #251D2B; --ink: #F3E8F0; --soft: #BBA7B8; --rule: #3E3146;
+  --accent: #EE8FC0; --accent-ink: #2A1622; --accent-soft: #3A2437;
+  --mauve: #C9A8E0; --warn: #F6B3A6; --warn-soft: #43282B;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+h1 { margin: 0 0 .25rem; font-size: 1.9rem; color: var(--accent); }
+h3, summary { color: var(--mauve); }
+::selection { background: var(--accent); color: var(--accent-ink); }
+.lede { color: var(--soft); margin: 0 0 2rem; }
+a { color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--rule); border-top: 3px solid var(--accent); border-radius: 12px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; }
+.head { display: flex; gap: 1rem; align-items: flex-start; }
+.head h2 { margin: 0; font-size: 1.2rem; flex: 1; }
+.score { background: var(--accent); color: var(--accent-ink); font-weight: 700; border-radius: 999px; padding: .15rem .7rem; white-space: nowrap; }
+.meta { color: var(--soft); font-size: .92rem; margin: .3rem 0 .6rem; }
+.flag { display: inline-block; background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 0 .45rem; font-size: .85rem; font-weight: 600; margin-right: .3rem; }
+.low { background: var(--rule); color: var(--soft); border-radius: 6px; padding: 0 .4rem; font-size: .8rem; }
+h3 { font-size: .95rem; margin: .9rem 0 .3rem; }
+ul { margin: 0 0 .5rem; padding-left: 1.2rem; }
+details { margin: .4rem 0; }
+summary { cursor: pointer; font-weight: 600; }
+.draft { position: relative; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 8px; padding: .75rem 4.5rem .75rem 1rem; white-space: pre-wrap; margin-top: .3rem; }
+button.copy { position: absolute; top: .4rem; right: .4rem; font: inherit; font-size: .8rem; font-weight: 600; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); border-radius: 6px; padding: .1rem .55rem; cursor: pointer; }
+.section { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: .8rem 1.25rem; margin-bottom: 1rem; }
+.section li { margin-bottom: .6rem; }
+.hint { color: var(--soft); font-size: .9rem; margin: .4rem 0; }
+.filtered li { color: var(--soft); }
+</style>
+</head>
+<body>
+<div class="page">
+<h1>Job digest, {{date}}</h1>
+<p class="lede">{{summary}}</p>
+{{cards}}
+<details class="section"><summary>Near misses ({{near_count}})</summary><p class="hint">Scored just under the research bar. Worth a skim if the scorer seems too strict.</p><ul>{{near_misses}}</ul></details>
+<details class="section" open><summary>Check manually ({{manual_count}})</summary><p class="hint">No confident official posting was found, so these weren't scored.</p><ul>{{manual}}</ul></details>
+<details class="section filtered"><summary>Filtered out ({{filtered_count}})</summary><ul>{{filtered}}</ul></details>
+</div>
+<script>
+document.querySelectorAll('.draft').forEach(function (box) {
+  var btn = document.createElement('button');
+  btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copy';
+  btn.addEventListener('click', function () {
+    var text = box.querySelector('.text').innerText;
+    function done() { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Select manually'; }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  });
+  box.appendChild(btn);
+});
+</script>
+</body>
+</html>
