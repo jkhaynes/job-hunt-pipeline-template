@@ -8,9 +8,8 @@ namespace JobHunt;
 /// Calls Claude through the Claude Code CLI in print mode, so usage counts against a Claude
 /// subscription (CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`) instead of API billing.
 /// </summary>
-public partial class ClaudeClient
+public partial class ClaudeClient(string defaultModel)
 {
-    const string ModelId = "claude-sonnet-5";
     static readonly TimeSpan Timeout = TimeSpan.FromMinutes(10);
 
     // Running totals for the run summary. CostUsd is the list-price equivalent Claude Code
@@ -23,13 +22,13 @@ public partial class ClaudeClient
         $"Claude usage: {Calls} calls, {InputTokens:N0} input tokens (incl. cache), {OutputTokens:N0} output tokens, " +
         $"~${CostUsd:0.00} at API list price";
 
-    public async Task<string> AskAsync(string system, string user, bool webSearch)
+    public async Task<string> AskAsync(string system, string user, bool webSearch, string? model = null)
     {
         // Tools: none for scoring/drafting; search-only for resolving and research.
         // LinkedIn pages are blocked outright: its terms prohibit scraping.
         string[] args =
         [
-            "-p", "--output-format", "json", "--model", ModelId,
+            "-p", "--output-format", "json", "--model", model ?? defaultModel,
             "--system-prompt", system,
             "--tools", webSearch ? "WebSearch,WebFetch" : "",
             .. webSearch
@@ -108,14 +107,21 @@ public partial class ClaudeClient
         return (proc.ExitCode, await stdout, await stderr);
     }
 
+    readonly object _totals = new(); // calls run in parallel
+
     void Track(JsonElement root)
     {
-        Calls++;
-        if (root.TryGetProperty("total_cost_usd", out var c) && c.ValueKind == JsonValueKind.Number) CostUsd += c.GetDecimal();
-        if (!root.TryGetProperty("usage", out var u)) return;
         long N(JsonElement e, string name) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt64() : 0;
-        InputTokens += N(u, "input_tokens") + N(u, "cache_creation_input_tokens") + N(u, "cache_read_input_tokens");
-        OutputTokens += N(u, "output_tokens");
+        var cost = root.TryGetProperty("total_cost_usd", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetDecimal() : 0;
+        var hasUsage = root.TryGetProperty("usage", out var u);
+        lock (_totals)
+        {
+            Calls++;
+            CostUsd += cost;
+            if (!hasUsage) return;
+            InputTokens += N(u, "input_tokens") + N(u, "cache_creation_input_tokens") + N(u, "cache_read_input_tokens");
+            OutputTokens += N(u, "output_tokens");
+        }
     }
 
     static string Trim(string s) => s.Length > 300 ? s[..300] + "..." : s;

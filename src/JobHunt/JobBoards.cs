@@ -22,8 +22,8 @@ public partial class JobBoards(string path)
         ? JsonSerializer.Deserialize<Dictionary<string, Board>>(File.ReadAllText(path), Json.Options) ?? new()
         : new();
 
-    public void Save() => File.WriteAllText(path, JsonSerializer.Serialize(
-        new SortedDictionary<string, Board>(_known), Json.Options));
+    public void Save() { lock (_known) File.WriteAllText(path, JsonSerializer.Serialize(
+        new SortedDictionary<string, Board>(_known), Json.Options)); }
 
     [GeneratedRegex(@"(?:job-)?boards(?:\.eu)?\.greenhouse\.io/(?!embed)([\w-]+)/jobs/", RegexOptions.IgnoreCase)] private static partial Regex GreenhouseRx();
     [GeneratedRegex(@"jobs(?:\.eu)?\.lever\.co/([\w-]+)/", RegexOptions.IgnoreCase)] private static partial Regex LeverRx();
@@ -40,25 +40,48 @@ public partial class JobBoards(string path)
 
     public void Learn(string company, string? postingUrl)
     {
-        if (FromUrl(postingUrl) is { } board) _known[Key(company)] = board;
+        if (FromUrl(postingUrl) is { } board) lock (_known) _known[Key(company)] = board;
+    }
+
+    /// <summary>Saved for companies with no Greenhouse, Lever, or Ashby list, so their names aren't guessed again.</summary>
+    static readonly Board None = new("none", "");
+
+    // Each company's list is downloaded once per run and shared by all its roles (large boards are several MB).
+    readonly Dictionary<Board, Task<List<BoardJob>?>> _lists = new();
+
+    Task<List<BoardJob>?> CachedListAsync(Board board)
+    {
+        lock (_lists)
+        {
+            if (!_lists.TryGetValue(board, out var task)) _lists[board] = task = ListAsync(board);
+            return task;
+        }
     }
 
     public async Task<(Board Board, BoardJob Job)?> FindAsync(AlertJob job)
     {
         var key = Key(job.Company);
-        var known = _known.TryGetValue(key, out var b);
+        Board? b; bool known; lock (_known) known = _known.TryGetValue(key, out b); // roles run in parallel
+        if (known && b == None) return null;
+        var anyBoardExists = false;
         foreach (var board in known ? [b!] : Guesses(job.Company))
         {
-            var jobs = await ListAsync(board);
+            List<BoardJob>? jobs;
+            try { jobs = await CachedListAsync(board); }
+            catch { anyBoardExists = true; continue; } // failed, not missing: don't record "none" for this company
             if (jobs is null) continue;
+            anyBoardExists = true;
             if (MatchTitle(job.Title, jobs.Select(j => j.Title).ToList()) is not { } i)
             {
                 if (known) return null; // right board, but no single matching title
                 continue;               // a guessed board may belong to another company with the same name
             }
-            _known[key] = board; // a guess only sticks once it has produced a title match
+            lock (_known) _known[key] = board; // a guess only sticks once it has produced a title match
             return (board, jobs[i]);
         }
+        // ponytail: a company that later moves to one of these systems stays "none"; delete its line in
+        // data/boards.json to have it checked again.
+        if (!known && !anyBoardExists) lock (_known) _known.TryAdd(key, None);
         return null;
     }
 
@@ -87,9 +110,12 @@ public partial class JobBoards(string path)
         return slugs.SelectMany(s => new[] { new Board("greenhouse", s), new Board("lever", s), new Board("ashby", s) });
     }
 
+    /// <summary>
+    /// The board's postings; null when the board doesn't exist (404). Throws on anything else (network
+    /// error, 5xx, bad JSON), so a temporary failure is never mistaken for "this company has no board".
+    /// </summary>
     static async Task<List<BoardJob>?> ListAsync(Board board)
     {
-        try
         {
             var url = board.Ats switch
             {
@@ -100,7 +126,8 @@ public partial class JobBoards(string path)
             };
             if (url is null) return null;
             using var res = await Http.GetAsync(url);
-            if (!res.IsSuccessStatusCode) return null;
+            if (res.StatusCode == HttpStatusCode.NotFound) return null;
+            res.EnsureSuccessStatusCode();
             using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
             var root = doc.RootElement;
             return board.Ats switch
@@ -117,7 +144,6 @@ public partial class JobBoards(string path)
                 _ => null,
             };
         }
-        catch { return null; } // board lookups are best effort; Claude search is the fallback
     }
 
     static string LeverText(JsonElement j)

@@ -7,8 +7,13 @@ public static class DigestRenderer
 {
     // Everything from a posting or a web search is untrusted: always go through E() or Link().
     public static string Render(string template, string date, string summary,
-        List<JobRole> kept, List<JobRole> nearMisses, List<JobRole> unverified, List<JobRole> filtered)
+        List<JobRole> kept, List<JobRole> nearMisses, List<JobRole> unverified, List<JobRole> filtered,
+        List<AlertJob>? queued = null)
     {
+        queued ??= [];
+        var waiting = new StringBuilder();
+        foreach (var j in queued)
+            waiting.Append($"<li>{E(j.Title)} at {E(j.Company)} · {Link(j.LinkedInUrl, "LinkedIn listing")}</li>");
         var cards = new StringBuilder();
         foreach (var r in kept) cards.Append(Card(r));
 
@@ -44,11 +49,13 @@ public static class DigestRenderer
             .Replace("{{near_misses}}", near.ToString())
             .Replace("{{manual_count}}", unverified.Count.ToString())
             .Replace("{{manual}}", manual.ToString())
+            .Replace("{{queued_count}}", queued.Count.ToString())
+            .Replace("{{queued}}", waiting.ToString())
             .Replace("{{filtered_count}}", filtered.Count.ToString())
             .Replace("{{filtered}}", rejected.ToString());
     }
 
-    static string FlagTags(JobRole r) => string.Concat(r.Flags.Select(f => $" <span class=\"flag\">{E(f)}</span>"));
+    static string FlagTags(JobRole r) => string.Concat(r.Flags.Distinct(StringComparer.OrdinalIgnoreCase).Select(f => $" <span class=\"flag\">{E(f)}</span>"));
 
     static string Card(JobRole r)
     {
@@ -58,39 +65,33 @@ public static class DigestRenderer
         sb.Append($"<div class=\"head\"><h2>{Link(p.Url, $"{r.Job.Title} at {r.Job.Company}")}</h2><span class=\"score\">{f.Score}</span></div>");
         var applicants = r.Applicants is { } a ? $" · {a}" : "";
         sb.Append($"<div class=\"meta\">Posted {E(p.PostedDate ?? "unknown")} · {E(Pay(p))} · {E(p.Remote)} · stack match {E(f.StackMatch)}{E(applicants)}</div>");
-        foreach (var flag in r.Flags) sb.Append($"<span class=\"flag\">{E(flag)}</span>");
+        foreach (var flag in r.Flags.Distinct(StringComparer.OrdinalIgnoreCase)) sb.Append($"<span class=\"flag\">{E(flag)}</span>");
         if (r.Flags.Contains("Easy Apply")) sb.Append($"<p>{Link(r.Job.LinkedInUrl, "Easy Apply on LinkedIn")}</p>");
+        if (p.CompanyUrl is { } company) sb.Append($"<p>{Link(company, "Company posting")}</p>");
         if (!string.IsNullOrEmpty(f.OneLine)) sb.Append($"<p>{E(f.OneLine)}</p>");
+        if (!string.IsNullOrEmpty(f.DayToDay)) sb.Append($"<h3>Day to day</h3><p>{E(f.DayToDay)}</p>");
+
+        if (f.MustHaves.Count > 0)
+        {
+            // What the posting requires, checked against the resume.
+            sb.Append("<h3>Must-haves</h3><ul class=\"checks\">");
+            foreach (var m in f.MustHaves)
+            {
+                var (mark, cls) = m.Met?.ToLowerInvariant() switch
+                {
+                    "yes" => ("✓", "yes"),
+                    "partial" => ("~", "partial"),
+                    _ => ("✗", "no"),
+                };
+                sb.Append($"<li class=\"{cls}\"><span class=\"mark\" aria-hidden=\"true\">{mark}</span> {E(m.Item)}<span class=\"sr\"> ({E(m.Met)})</span></li>");
+            }
+            sb.Append("</ul>");
+        }
 
         sb.Append("<h3>Why you fit</h3>").Append(List(f.WhyFit));
         if (f.RedFlags.Count > 0) sb.Append("<h3>Red flags</h3>").Append(List(f.RedFlags));
         if (f.Gaps.Count > 0) sb.Append("<details><summary>Gaps</summary>").Append(List(f.Gaps)).Append("</details>");
 
-        if (r.Research is { } res)
-        {
-            if (res.Contacts.Count > 0)
-            {
-                sb.Append("<h3>Contacts</h3><ul>");
-                foreach (var c in res.Contacts)
-                {
-                    sb.Append($"<li>{Link(c.Linkedin, c.Name ?? "Unknown")}, {E(c.Title)} ({E(c.Role)})");
-                    if (!string.IsNullOrEmpty(c.Email)) sb.Append($" · {E(c.Email)}");
-                    sb.Append($" · {Link(c.Source, "source")}");
-                    if (c.Confidence != "high") sb.Append(" <span class=\"low\">low confidence</span>");
-                    sb.Append("</li>");
-                }
-                sb.Append("</ul>");
-            }
-            if (res.InterviewLoop.Count > 0)
-            {
-                sb.Append("<details><summary>Interview loop</summary><ul>");
-                foreach (var d in res.InterviewLoop) sb.Append($"<li>{E(d.Detail)} ({Link(d.Source, "source")})</li>");
-                sb.Append("</ul></details>");
-            }
-        }
-
-        if (!string.IsNullOrEmpty(r.Draft))
-            sb.Append($"<h3>Draft to {E(r.DraftTo?.Name)}</h3><div class=\"draft\"><div class=\"text\">{E(r.Draft)}</div></div>");
         if (!string.IsNullOrEmpty(p.StatusCheckUrl))
             sb.Append($"<p>{Link(p.StatusCheckUrl, "Status check portal")}</p>");
 

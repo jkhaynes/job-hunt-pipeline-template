@@ -43,5 +43,5 @@ jobs:
         run: |
           git config user.name "job-hunt-bot"
           git config user.email "job-hunt-bot@users.noreply.github.com"
-          git add data/seen.json data/boards.json
-          git diff --cached --quiet || { git commit -m "Update seen jobs and job boards" && git push; }
+          git add data/seen.json data/boards.json data/queue.json
+          git diff --cached --quiet || { git commit -m "Update seen jobs, job boards, and queue" && git push; }

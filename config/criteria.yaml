@@ -1,14 +1,19 @@
-# Everything that decides which roles reach your digest. Edit freely.
+# Everything personal lives here (plus config/resume.md). The code and prompts are generic.
+# Edit freely; the example values below are for a senior .NET backend engineer.
 
 hard:
   # Deterministic rules, enforced in code (no model call).
   remote: fully_remote          # reject hybrid and onsite ("any" to allow everything)
-  us_only: true                 # reject roles the posting says must be based outside the US
-  home_state: ""                # two-letter state (e.g. MI); rejects roles that require living elsewhere
-  min_salary: 150000            # reject if the top of the band is below this (annual USD)
+  countries: [US]               # reject roles the posting says must be based only elsewhere ([] for no country rule)
+  home_state: ""                # two-letter US state (e.g. OH): rejects roles that require living elsewhere ("" for none)
+  min_salary: 150000            # reject if the top of the posted band is below this (annual USD)
   unknown_salary: keep          # keep but flag when pay is not posted (or "drop")
+  # Whole words or phrases, case-insensitive ("intern" doesn't match "Internal Tools"). Checked first, free.
   exclude_title_words: [intern, junior, "data engineer"]
-  # Recruiting agencies and repost sites: kept, tagged "Agency repost", and never searched for.
+  # Companies you don't want to work for. Matched on whole leading words ("Initech" matches
+  # "Initech Corporation"). Dropped before any lookup, LinkedIn request, or Claude usage.
+  exclude_companies: []
+  # Recruiting agencies and repost sites: kept, tagged "Agency repost", and never web-searched for.
   agencies: [jobgether, remotehunter, lensa, dice, cybercoders, "insight global", teksystems,
              "robert half", "motion recruitment", "jobs via dice", hirenza, crossover]
 
@@ -18,17 +23,59 @@ preferences:
   bonus_stack: [Azure, AWS, TypeScript]
   avoid: >
     Roles centered on ETL, data pipelines, or BI reporting.
+    Pure people-management roles with no hands-on technical work.
   like: >
     Senior backend or full stack roles. Tech lead scope.
+    Player-coach or tech-lead-manager roles that stay hands-on.
+  # Extra scoring rules, read by the scorer as written (refine the rubric in prompts/score.md).
+  scoring_notes: >
+    The level I want is senior or above. If the posting describes the role as mid-level or below
+    senior, score it at most 69.
+    Libraries, databases, and clouds I haven't used but that sit in my ecosystem are minor gaps.
+    A primary language I don't use is a major gap.
+  # Titles the cheap title check should drop (only when the title alone makes it clear).
+  not_interested_in: [QA or test engineering, data engineering, Salesforce, SAP, mainframe, embedded,
+                      IT support, sales, iOS or Android]
 
 linkedin:
-  # OFF by default. When true, the pipeline makes one logged-out request per new role to
-  # LinkedIn's public job page: closed jobs are filtered before any lookup, and Easy Apply roles
-  # (or roles with no findable posting) are scored from LinkedIn's description.
-  # LinkedIn's terms prohibit automated access, logged in or not. Turning this on is your call.
+  # Both options below are OFF by default. They make logged-out requests to LinkedIn's public pages.
+  # LinkedIn's terms prohibit automated access, logged in or not. Turning them on is your call.
+
+  # One request per new role to its public job page, 3 seconds apart. Drops closed jobs, pay below
+  # your floor (LinkedIn's pay box or a range in the description), and the seniority levels below,
+  # all before any Claude usage. Roles are then scored from the page's description.
   check_job_page: false
+  skip_seniority: [Entry level, Internship, Associate]
+
+  # Read these searches in full instead of relying only on the ~6 jobs each alert email shows.
+  # What LinkedIn's public search really does (tested Sep 2026): it returns every job posted in the
+  # window, RANKED by these keywords. AND/OR/NOT are not enforced, and its remote, experience,
+  # job-type, and salary filters are ignored. So each search is read down to max_results_per_search,
+  # "AND remote" is added when hard.remote is fully_remote, and everything else is checked per role.
+  run_searches: false
+  posted_within_hours: 24       # only roles posted this recently (LinkedIn's window, re-checked per result)
+  geo_id: "103644278"           # LinkedIn's location ID for the United States
+  max_results_per_search: 50    # how deep into each search's ranking to read; the search never "runs out"
+  searches:
+    - 'senior AND ("C#" OR ".NET") AND (backend OR API)'
+    - '("tech lead" OR "lead engineer") AND ("C#" OR ".NET")'
+    - '(staff OR principal) AND ("C#" OR ".NET")'
 
 scoring:
-  min_score_to_research: 60     # 0 to 100; at or above gets research and a full card
-  near_miss_min: 50             # between this and the research bar: listed as a near miss
-  max_roles_per_digest: 12
+  min_score: 60                 # 0 to 100; at or above gets a full card in the digest
+  near_miss_min: 50             # between this and the bar: listed as a near miss
+
+  # Usage budget per run, in dollars at API list price (what each run's usage line reports).
+  # On a Claude subscription this isn't billed; it caps how much of your plan's limits one run can use.
+  # When scoring reaches it, the remaining roles wait in the queue for the next run.
+  run_budget_usd: 10
+
+  max_run_minutes: 45           # stop starting new roles after this, so the run always finishes cleanly
+  parallel_calls: 8             # Claude calls in flight at once
+
+gmail:
+  alerts_label: JobAlerts       # the Gmail label your LinkedIn alert emails get (set up with a Gmail filter)
+
+models:
+  scoring: claude-sonnet-5        # scores each role (and the email-only path's posting lookup)
+  title_check: claude-haiku-4-5   # cheap title screen, 50 titles per call

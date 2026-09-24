@@ -30,11 +30,11 @@ public class GmailClient
     }
 
     /// <summary>Returns (messageId, htmlBody, sentDate) for each unread alert.</summary>
-    public async Task<List<(string Id, string Html, DateTimeOffset Date)>> UnreadAlertsAsync()
+    public async Task<List<(string Id, string Html, DateTimeOffset Date)>> UnreadAlertsAsync(string label)
     {
         var result = new List<(string, string, DateTimeOffset)>();
         var list = _svc.Users.Messages.List("me");
-        list.Q = "label:JobAlerts is:unread";
+        list.Q = $"label:{label.Trim().Replace(' ', '-')} is:unread"; // Gmail search writes spaces in label names as hyphens
         list.MaxResults = 100;
         var page = await list.ExecuteAsync();
         foreach (var m in page.Messages ?? [])

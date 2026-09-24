@@ -26,7 +26,7 @@ Return JSON only:
   "salary_min": number or null, "salary_max": number or null,
   "description": "full description text",
   "status_check_url": "candidate portal URL if the ATS has one, else null" }
-Salaries are ANNUAL USD as full numbers (e.g. 175000). If pay is hourly,
+Salaries are ANNUAL USD as full numbers (e.g. 150000). If pay is hourly,
 multiply by 2080. If you find nothing plausible, return
 { "url": null, "reason": "..." }.
 Return JSON only.

@@ -17,29 +17,53 @@ public class Criteria
     public Dictionary<string, object> Preferences { get; set; } = new();
     public ScoringRules Scoring { get; set; } = new();
     public LinkedInRules Linkedin { get; set; } = new();
+    public ModelChoices Models { get; set; } = new();
+    public GmailSettings Gmail { get; set; } = new();
+}
+
+public class GmailSettings
+{
+    /// <summary>The Gmail label your job alert emails get (set up with a Gmail filter).</summary>
+    public string AlertsLabel { get; set; } = "JobAlerts";
+}
+
+public class ModelChoices
+{
+    public string Scoring { get; set; } = "claude-sonnet-5";
+    public string TitleCheck { get; set; } = "claude-haiku-4-5";
 }
 
 public class LinkedInRules
 {
     public bool CheckJobPage { get; set; }
+    public bool RunSearches { get; set; }
+    public List<string> SkipSeniority { get; set; } = new();
+    public int PostedWithinHours { get; set; } = 24;
+    public string GeoId { get; set; } = "103644278";
+    public int MaxResultsPerSearch { get; set; } = 250;
+    public List<string> Searches { get; set; } = new();
 }
 
 public class HardRules
 {
     public string Remote { get; set; } = "fully_remote";
-    public bool UsOnly { get; set; } = true;
+    /// <summary>Countries you can work from. A posting limited to other countries is filtered; empty = no country rule.</summary>
+    public List<string> Countries { get; set; } = new();
     public string? HomeState { get; set; }
     public int MinSalary { get; set; }
     public string UnknownSalary { get; set; } = "keep";
     public List<string> ExcludeTitleWords { get; set; } = new();
+    public List<string> ExcludeCompanies { get; set; } = new();
     public List<string> Agencies { get; set; } = new();
 }
 
 public class ScoringRules
 {
-    public int MinScoreToResearch { get; set; } = 60;
+    public int MinScore { get; set; } = 60;
     public int NearMissMin { get; set; } = 50;
-    public int MaxRolesPerDigest { get; set; } = 12;
+    public decimal RunBudgetUsd { get; set; } = 10;
+    public int MaxRunMinutes { get; set; } = 45;
+    public int ParallelCalls { get; set; } = 4;
 }
 
 public class Posting
@@ -65,6 +89,8 @@ public class Posting
     }
     public string? Description { get; set; }
     public string? StatusCheckUrl { get; set; }
+    /// <summary>The company's own posting (Greenhouse, Lever, or Ashby) when found; cards link to it.</summary>
+    public string? CompanyUrl { get; set; }
 }
 
 public class FitScore
@@ -75,29 +101,45 @@ public class FitScore
     public List<string> Gaps { get; set; } = new();
     public List<string> RedFlags { get; set; } = new();
     public string? OneLine { get; set; }
+    /// <summary>Model's estimate of the top of the pay band when the posting doesn't state pay.</summary>
+    public decimal? EstimatedPayMax { get; set; }
+    public List<MustHave> MustHaves { get; set; } = new();
+    public string? DayToDay { get; set; }
+    /// <summary>"hands_on", "player_coach", or "people_manager", judged from the description.</summary>
+    public string? PeopleManagement { get; set; }
+    public int? DirectReports { get; set; }
+
+    /// <summary>Card tag for manager-ish roles; null for hands-on roles (no tag, to keep cards clean).</summary>
+    public string? PeopleTag() => PeopleManagement switch
+    {
+        "player_coach" => "Player-coach" + Reports(),
+        "people_manager" => "People manager" + Reports(),
+        _ => null,
+    };
+
+    string Reports() => DirectReports is > 0 and var n ? $" (~{n} direct reports)" : "";
+
+    // Facts read from the description in the same call (so there's no separate extraction call).
+    public string? Remote { get; set; }
+    public List<string> Countries { get; set; } = new();
+    public List<string> StateRestrictions { get; set; } = new();
+    public string? EmploymentType { get; set; }
+    public decimal? SalaryMin { get; set; }
+    public decimal? SalaryMax { get; set; }
+
+    public void CopyFactsTo(Posting p)
+    {
+        (p.Remote, p.Countries, p.StateRestrictions, p.EmploymentType, p.SalaryMin, p.SalaryMax) =
+            (Remote, Countries, StateRestrictions, EmploymentType, SalaryMin, SalaryMax);
+        p.NormalizePay();
+    }
 }
 
-public class Contact
+public class MustHave
 {
-    public string? Name { get; set; }
-    public string? Title { get; set; }
-    public string? Role { get; set; }
-    public string? Linkedin { get; set; }
-    public string? Email { get; set; }
-    public string? Source { get; set; }
-    public string? Confidence { get; set; }
-}
-
-public class LoopDetail
-{
-    public string? Detail { get; set; }
-    public string? Source { get; set; }
-}
-
-public class Research
-{
-    public List<Contact> Contacts { get; set; } = new();
-    public List<LoopDetail> InterviewLoop { get; set; } = new();
+    public string? Item { get; set; }
+    /// <summary>"yes", "partial", or "no", judged against the resume.</summary>
+    public string? Met { get; set; }
 }
 
 /// <summary>Everything the pipeline learned about one alert job.</summary>
@@ -106,10 +148,7 @@ public class JobRole
     public required AlertJob Job { get; init; }
     public Posting? Posting { get; set; }
     public FitScore? Fit { get; set; }
-    public Research? Research { get; set; }
-    public Contact? DraftTo { get; set; }
     public string? Applicants { get; set; }
-    public string? Draft { get; set; }
     public string? FilterReason { get; set; }
     public List<string> Flags { get; } = new();
 }

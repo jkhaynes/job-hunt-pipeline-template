@@ -31,12 +31,17 @@ h3 { font-size: .95rem; margin: .9rem 0 .3rem; }
 ul { margin: 0 0 .5rem; padding-left: 1.2rem; }
 details { margin: .4rem 0; }
 summary { cursor: pointer; font-weight: 600; }
-.draft { position: relative; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 8px; padding: .75rem 4.5rem .75rem 1rem; white-space: pre-wrap; margin-top: .3rem; }
-button.copy { position: absolute; top: .4rem; right: .4rem; font: inherit; font-size: .8rem; font-weight: 600; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); border-radius: 6px; padding: .1rem .55rem; cursor: pointer; }
 .section { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: .8rem 1.25rem; margin-bottom: 1rem; }
 .section li { margin-bottom: .6rem; }
 .hint { color: var(--soft); font-size: .9rem; margin: .4rem 0; }
 .filtered li { color: var(--soft); }
+.checks { list-style: none; padding-left: 0; }
+.checks li { padding-left: 1.5rem; position: relative; }
+.checks .mark { position: absolute; left: 0; font-weight: 700; }
+.checks .yes .mark { color: var(--mauve); }
+.checks .partial .mark { color: var(--warn); }
+.checks .no .mark { color: var(--accent); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 </head>
 <body>
@@ -44,29 +49,10 @@ button.copy { position: absolute; top: .4rem; right: .4rem; font: inherit; font-
 <h1>Job digest, {{date}}</h1>
 <p class="lede">{{summary}}</p>
 {{cards}}
-<details class="section"><summary>Near misses ({{near_count}})</summary><p class="hint">Scored just under the research bar. Worth a skim if the scorer seems too strict.</p><ul>{{near_misses}}</ul></details>
+<details class="section"><summary>Near misses ({{near_count}})</summary><p class="hint">Scored just under the bar. Worth a skim if the scorer seems too strict.</p><ul>{{near_misses}}</ul></details>
 <details class="section" open><summary>Check manually ({{manual_count}})</summary><p class="hint">No confident official posting was found, so these weren't scored.</p><ul>{{manual}}</ul></details>
+<details class="section"><summary>Queued for next run ({{queued_count}})</summary><p class="hint">Found but not reached this run (time or usage budget, or a LinkedIn rate limit). The next run does these first.</p><ul>{{queued}}</ul></details>
 <details class="section filtered"><summary>Filtered out ({{filtered_count}})</summary><ul>{{filtered}}</ul></details>
 </div>
-<script>
-document.querySelectorAll('.draft').forEach(function (box) {
-  var btn = document.createElement('button');
-  btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copy';
-  btn.addEventListener('click', function () {
-    var text = box.querySelector('.text').innerText;
-    function done() { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); }
-    function fallback() {
-      var ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Select manually'; }
-      document.body.removeChild(ta);
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
-    else fallback();
-  });
-  box.appendChild(btn);
-});
-</script>
 </body>
 </html>
