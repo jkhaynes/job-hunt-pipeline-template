@@ -8,7 +8,7 @@ public static class DigestRenderer
     // Everything from a posting or a web search is untrusted: always go through E() or Link().
     public static string Render(string template, string date, string summary,
         List<JobRole> kept, List<JobRole> nearMisses, List<JobRole> unverified, List<JobRole> filtered,
-        List<AlertJob>? queued = null)
+        List<AlertJob>? queued = null, string title = "Job digest")
     {
         queued ??= [];
         var waiting = new StringBuilder();
@@ -42,6 +42,7 @@ public static class DigestRenderer
             rejected.Append($"<li>{E(r.Job.Title)} at {E(r.Job.Company)}: {E(r.FilterReason)}</li>");
 
         return template
+            .Replace("{{title}}", E(title))
             .Replace("{{date}}", E(date))
             .Replace("{{summary}}", E(summary))
             .Replace("{{cards}}", cards.ToString())

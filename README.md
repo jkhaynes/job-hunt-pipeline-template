@@ -159,6 +159,16 @@ With the LinkedIn job page check on, most roles are filtered for free, and each 
 - **Models:** `models.scoring` and `models.title_check`.
 - **Digest look:** `templates/digest.html` is plain HTML and CSS, with the colors as CSS variables at the top.
 
+### More than one search (profiles)
+
+A profile is a second search with its own criteria, run by the same code. `--profile NAME` reads `config/NAME.yaml` instead of `config/criteria.yaml`, keeps its own seen jobs and queue in `data/NAME/`, and sends its own digest, titled by the profile's `digest_title`. The resume is shared.
+
+`config/ai-forward.yaml` is an example: AI-forward roles on any stack. Its `primary_stack` is empty, so the scorer ignores the stack and judges transferable experience instead. Delete it if you only want one search.
+
+- **Alerts:** give each profile its own Gmail label (the example uses `JobAlertsAI`), because a run marks its alerts read. `alerts_label: ""` reads no emails.
+- **Running it:** in **Actions → daily-job-digest → Run workflow**, enter the profile name. The daily `schedule:` runs only the default profile. For a daily run of another profile, call the workflow from an outside scheduler (see **Run it**) with the body `{"ref":"main","inputs":{"profile":"ai-forward"}}`.
+- **Tags:** two tags work for any profile: **Stack-flexible**, when the posting says its stack can be learned, and **AI is the product**.
+
 ## Troubleshooting
 
 | Symptom | Fix |

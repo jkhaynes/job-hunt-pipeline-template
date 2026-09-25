@@ -14,6 +14,11 @@ RUBRIC (score 0-100):
 - 40-59: Partial fit: a major specialty they lack is central to the role,
   or the stack is mostly outside their primary stack.
 - 0-39: Wrong stack, wrong level, or work they want to avoid.
+If PREFERENCES.primary_stack is empty, the stack is not a scoring factor:
+read "primary stack" above as the candidate's transferable experience
+(the kind of systems they've built, their scope and leadership, their
+domains), and treat a language or framework they haven't used as a minor
+gap unless the posting requires years of it.
 
 GAP SEVERITY:
 - Minor: a library, framework, database, cloud, or tool in an ecosystem
@@ -57,6 +62,8 @@ Return JSON only:
   "day_to_day": "1-2 sentences on what the person would actually spend their time doing",
   "people_management": "hands_on | player_coach | people_manager (see PEOPLE MANAGEMENT above)",
   "direct_reports": number of direct reports if the posting states or clearly implies it, else null,
+  "stack_flexibility": "flexible (the posting says experience with its specific languages or frameworks isn't required, or can be learned) | specific | unknown",
+  "ai_role": "core (AI is the product itself) | adjacent (AI features in a larger product, or AI tooling for the team) | none",
   "must_haves": [{ "item": "each REQUIRED qualification the posting states (not nice-to-haves), briefly", "met": "yes | partial | no, judged against the resume" }],
   "estimated_pay_max": "ONLY if the JOB text states no pay: your best estimate of the TOP of the annual USD base pay band, from the title, level, company, industry, and location, as a full number (e.g. 180000). If pay is stated, null.",
 

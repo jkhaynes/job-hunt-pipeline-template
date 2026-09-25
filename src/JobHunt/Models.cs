@@ -19,11 +19,13 @@ public class Criteria
     public LinkedInRules Linkedin { get; set; } = new();
     public ModelChoices Models { get; set; } = new();
     public GmailSettings Gmail { get; set; } = new();
+    /// <summary>Digest heading and email subject, so each profile's digest is easy to tell apart.</summary>
+    public string DigestTitle { get; set; } = "Job digest";
 }
 
 public class GmailSettings
 {
-    /// <summary>The Gmail label your job alert emails get (set up with a Gmail filter).</summary>
+    /// <summary>The Gmail label your job alert emails get (set up with a Gmail filter). Empty: don't read alert emails.</summary>
     public string AlertsLabel { get; set; } = "JobAlerts";
 }
 
@@ -118,6 +120,18 @@ public class FitScore
     };
 
     string Reports() => DirectReports is > 0 and var n ? $" (~{n} direct reports)" : "";
+
+    /// <summary>"flexible" when the posting says its specific stack can be learned; "specific" or "unknown" otherwise.</summary>
+    public string? StackFlexibility { get; set; }
+    /// <summary>"core" when AI is the product itself; "adjacent" or "none" otherwise.</summary>
+    public string? AiRole { get; set; }
+
+    /// <summary>Card tags read from the posting, beyond the people tag.</summary>
+    public IEnumerable<string> PostingTags()
+    {
+        if (StackFlexibility == "flexible") yield return "Stack-flexible";
+        if (AiRole == "core") yield return "AI is the product";
+    }
 
     // Facts read from the description in the same call (so there's no separate extraction call).
     public string? Remote { get; set; }

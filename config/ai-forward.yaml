@@ -1,0 +1,66 @@
+# Example second profile: AI-forward roles on any stack. Run with --profile ai-forward.
+# Same code and resume as config/criteria.yaml; seen jobs and the queue live in data/ai-forward/.
+# Delete this file if you only want one search.
+digest_title: AI-forward digest
+
+hard:
+  remote: fully_remote
+  countries: [US]
+  home_state: ""
+  min_salary: 150000            # no level rule here: the pay floor screens out junior roles
+  unknown_salary: keep
+  exclude_title_words: [intern, junior, "data engineer"]
+  exclude_companies: []
+  agencies: [jobgether, remotehunter, lensa, dice, cybercoders, "insight global", teksystems,
+             "robert half", "motion recruitment", "jobs via dice", hirenza, crossover]
+
+preferences:
+  # Empty on purpose: the stack is not a scoring factor for this profile (see prompts/score.md).
+  primary_stack: []
+  avoid: >
+    Roles centered on ETL, data pipelines, or BI reporting.
+    ML research or data science roles where the job is training models rather than building software.
+    Pure people-management roles with no hands-on technical work.
+  like: >
+    AI is the product itself, not just a tool the team uses.
+    Early-stage companies (seed to Series B, small teams, lots of ownership).
+    Postings that say experience with their specific stack isn't required or can be learned.
+    Backend, API, full stack, or platform work. Tech lead scope.
+  scoring_notes: >
+    Judge fit on what transfers from my resume: the kind of systems I've built, my scope and
+    leadership, and my domains. Not on the language.
+    A language or framework I haven't used is a minor gap. It's a major gap only when the posting
+    requires years of it as a hard requirement.
+    Add up to 10 points when the posting says the stack can be learned, and up to 10 when AI is the
+    core of the product.
+  not_interested_in: [QA or test engineering, data engineering, Salesforce, SAP, mainframe, embedded,
+                      IT support, sales, iOS or Android, ML research or data science]
+
+linkedin:
+  # Off by default, as in criteria.yaml. Turning them on is your call (see the README).
+  check_job_page: false
+  skip_seniority: [Internship]
+  run_searches: false
+  posted_within_hours: 24
+  geo_id: "103644278"           # United States
+  max_results_per_search: 50
+  searches:
+    - '("AI engineer" OR "applied AI" OR "AI product engineer") AND (software OR backend OR "full stack")'
+    - '(LLM OR "generative AI" OR GenAI) AND ("software engineer" OR developer)'
+    - '("founding engineer" OR "early stage" OR startup) AND (AI OR LLM)'
+
+scoring:
+  min_score: 60
+  near_miss_min: 50
+  run_budget_usd: 10
+  max_run_minutes: 45
+  parallel_calls: 8
+
+gmail:
+  # Each profile needs its own label, because a run marks its alerts read. Make AI-focused LinkedIn
+  # alerts, filter them to this label, and keep criteria.yaml's alerts on its own label.
+  alerts_label: JobAlertsAI
+
+models:
+  scoring: claude-sonnet-5
+  title_check: claude-haiku-4-5

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Job digest {{date}}</title>
+<title>{{title}} {{date}}</title>
 <style>
 /* Dark mauve and pink, always dark regardless of system setting. */
 :root {
@@ -46,7 +46,7 @@ summary { cursor: pointer; font-weight: 600; }
 </head>
 <body>
 <div class="page">
-<h1>Job digest, {{date}}</h1>
+<h1>{{title}}, {{date}}</h1>
 <p class="lede">{{summary}}</p>
 {{cards}}
 <details class="section"><summary>Near misses ({{near_count}})</summary><p class="hint">Scored just under the bar. Worth a skim if the scorer seems too strict.</p><ul>{{near_misses}}</ul></details>

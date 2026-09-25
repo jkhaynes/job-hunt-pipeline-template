@@ -1,11 +1,12 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using JobHunt;
 using MimeKit;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 // Usage (run from the repo root):
-//   dotnet run --project src/JobHunt -- [--out out/] [--dry-run] [--from-fixtures dir] [--limit N]
+//   dotnet run --project src/JobHunt -- [--out out/] [--dry-run] [--from-fixtures dir] [--limit N] [--profile NAME]
 //   dotnet run --project src/JobHunt -- --auth path/to/client_secret.json
 //   dotnet run --project src/JobHunt -- --self-test
 //   dotnet run --project src/JobHunt -- --searches-only --limit 20   (full flow on LinkedIn searches, no Gmail, dry run)
@@ -49,9 +50,17 @@ var dryRun = Flag("--dry-run") || searchesOnly;
 var limit = int.TryParse(Arg("--limit"), out var n) ? n : int.MaxValue;
 var today = DateTime.Now.ToString("yyyy-MM-dd");
 
-// Config
+// Config. --profile NAME runs a second search from config/NAME.yaml, with its own seen jobs and
+// queue in data/NAME/. The default profile uses config/criteria.yaml and data/. The resume and the
+// learned company job boards are shared.
+var profile = Arg("--profile");
+if (profile is not null && !Regex.IsMatch(profile, "^[a-z0-9-]+$")) { Console.Error.WriteLine("--profile takes lowercase letters, digits, and dashes"); return 1; }
+var configPath = profile is null ? "config/criteria.yaml" : $"config/{profile}.yaml";
+var dataDir = profile is null ? "data" : $"data/{profile}";
+Directory.CreateDirectory(dataDir);
 var yaml = new DeserializerBuilder().WithNamingConvention(UnderscoredNamingConvention.Instance).IgnoreUnmatchedProperties().Build();
-var criteria = yaml.Deserialize<Criteria>(File.ReadAllText("config/criteria.yaml"));
+var criteria = yaml.Deserialize<Criteria>(File.ReadAllText(configPath));
+Console.WriteLine($"profile: {profile ?? "default"} ({configPath})");
 var preferences = new SerializerBuilder().Build().Serialize(criteria.Preferences);
 var resume = File.ReadAllText("config/resume.md");
 string ReadPrompt(string name) => File.ReadAllText($"prompts/{name}.md");
@@ -61,15 +70,16 @@ var limitsBefore = await ClaudeClient.LimitsAsync();
 var boards = new JobBoards("data/boards.json");
 var resolver = new PostingResolver(claude, boards, ReadPrompt("resolve"), ReadPrompt("extract"));
 var matcher = new Matcher(claude, resume, preferences, ReadPrompt("score"));
-var seen = new SeenStore("data/seen.json");
+var seen = new SeenStore($"{dataDir}/seen.json");
 GmailClient? gmail = fixtures is null && !searchesOnly ? new GmailClient() : null;
 
-var queue = new JobQueue("data/queue.json");
+var queue = new JobQueue($"{dataDir}/queue.json");
 var run = Stopwatch.StartNew();
 var floor = criteria.Hard.MinSalary;
 
 // ---- Sources: queued roles first, then alert emails, then full LinkedIn searches (opt-in) ----
-var alerts = searchesOnly ? [] : fixtures is not null
+// An empty alerts_label reads no emails (so two profiles don't both take the same unread alerts).
+var alerts = searchesOnly || (fixtures is null && string.IsNullOrWhiteSpace(criteria.Gmail.AlertsLabel)) ? [] : fixtures is not null
     ? Directory.GetFiles(fixtures, "*.eml").Select(f => MimeMessage.Load(f)).Select((m, i) => (Id: fixtures + i, Html: m.HtmlBody ?? "", m.Date)).ToList()
     : await gmail!.UnreadAlertsAsync(criteria.Gmail.AlertsLabel);
 var incoming = alerts.SelectMany(a => AlertParser.Parse(a.Html).Select(j => j with { AlertDate = a.Date })).ToList();
@@ -220,6 +230,7 @@ async Task ScoreRoleAsync(AlertJob job)
             role.Fit ??= await matcher.ScoreAsync(role);
             // Manager-ish roles are kept and tagged ("Player-coach", "People manager"), never filtered by title.
             if (role.Fit.PeopleTag() is { } people) role.Flags.Add(people);
+            role.Flags.AddRange(role.Fit.PostingTags());
             // Option 2 for unposted pay: keep the role, but flag a low estimate and sort it lower.
             if (role.Posting.SalaryMax is null && role.Fit.EstimatedPayMax is { } est && est < floor)
                 role.Flags.Add($"Pay likely below floor (est. up to ${est:N0})");
@@ -263,8 +274,8 @@ var summary = (kept.Count == 0
     $" {nearMisses.Count} near misses, {unverified.Count} to check by hand, {filtered.Count} filtered out, {queued.Count} queued for next run." +
     (criteria.Linkedin.RunSearches ? $" Searches read {criteria.Linkedin.MaxResultsPerSearch} deep." : "");
 Directory.CreateDirectory(outDir);
-var digestPath = Path.Combine(outDir, $"digest-{today}.html");
-File.WriteAllText(digestPath, DigestRenderer.Render(File.ReadAllText("templates/digest.html"), today, summary, kept, nearMisses, unverified, filtered, queued));
+var digestPath = Path.Combine(outDir, $"digest-{profile ?? "default"}-{today}.html");
+File.WriteAllText(digestPath, DigestRenderer.Render(File.ReadAllText("templates/digest.html"), today, summary, kept, nearMisses, unverified, filtered, queued, criteria.DigestTitle));
 var usage = claude.UsageSummary() + "\n" + ClaudeClient.LimitsSummary(limitsBefore, await ClaudeClient.LimitsAsync());
 Console.WriteLine($"Wrote {digestPath}\n{summary}\n{usage}");
 
@@ -276,7 +287,7 @@ if (dryRun || gmail is null)
 
 // On empty days this sends a one-liner with no attachment, so you know the job ran.
 var worthOpening = kept.Count + nearMisses.Count + unverified.Count + queued.Count > 0;
-await gmail.SendDigestAsync($"Job digest {today}: {kept.Count} roles", summary + "\n\n" + usage, worthOpening ? digestPath : "");
+await gmail.SendDigestAsync($"{criteria.DigestTitle} {today}: {kept.Count} roles", summary + "\n\n" + usage, worthOpening ? digestPath : "");
 await gmail.MarkReadAsync(alerts.Select(a => a.Id));
 // Everything that got an outcome is seen; queued roles aren't, so the next run picks them up first.
 var queuedIds = queued.Select(j => j.LinkedInId).ToHashSet();

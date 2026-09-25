@@ -49,6 +49,10 @@ public static class SelfTest
         Check(new FitScore { PeopleManagement = "player_coach", DirectReports = 5 }.PeopleTag() == "Player-coach (~5 direct reports)"
               && new FitScore { PeopleManagement = "people_manager" }.PeopleTag() == "People manager"
               && new FitScore { PeopleManagement = "hands_on" }.PeopleTag() is null, "tags manager-ish roles, not hands-on ones");
+        Check(new FitScore { StackFlexibility = "flexible", AiRole = "core" }.PostingTags().SequenceEqual(["Stack-flexible", "AI is the product"])
+              && !new FitScore { StackFlexibility = "specific", AiRole = "adjacent" }.PostingTags().Any(), "tags stack-flexible and AI-product roles only");
+        var tagged = Json.Parse<FitScore>("{ \"score\": 70, \"stack_flexibility\": \"flexible\", \"ai_role\": \"core\" }");
+        Check(tagged.StackFlexibility == "flexible" && tagged.AiRole == "core", "reads the posting tags from the score reply");
         var homeRules = new HardRules { HomeState = "OH" };
         JobRole Restricted(params string[] states) => new() { Job = a, Posting = new Posting { Remote = "fully_remote", SalaryMax = 200000, StateRestrictions = [.. states] } };
         Check(Matcher.HardFilter(Restricted("WI"), homeRules) is not null, "drops roles restricted to another state");

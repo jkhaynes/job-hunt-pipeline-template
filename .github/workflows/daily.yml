@@ -2,7 +2,17 @@ name: daily-job-digest
 on:
   schedule:
     - cron: "0 10 * * *"      # 6am EDT, 5am EST (cron runs in UTC)
-  workflow_dispatch: {}       # manual "Run workflow" button
+  workflow_dispatch:          # manual "Run workflow" button
+    inputs:
+      profile:
+        description: "Profile: blank for config/criteria.yaml, or NAME for config/NAME.yaml"
+        required: false
+        default: ""
+
+# One run at a time, so two profiles never race to commit data/.
+concurrency:
+  group: job-digest
+  cancel-in-progress: false
 
 permissions:
   contents: write             # to commit seen.json
@@ -30,7 +40,8 @@ jobs:
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
           DIGEST_TO: ${{ secrets.DIGEST_TO }}
-        run: dotnet run --project src/JobHunt -- --out out/
+          PROFILE: ${{ inputs.profile }}
+        run: dotnet run --project src/JobHunt -- --out out/ ${PROFILE:+--profile "$PROFILE"}
 
       - name: Save digest
         uses: actions/upload-artifact@v4
@@ -43,5 +54,5 @@ jobs:
         run: |
           git config user.name "job-hunt-bot"
           git config user.email "job-hunt-bot@users.noreply.github.com"
-          git add data/seen.json data/boards.json data/queue.json
+          git add data/
           git diff --cached --quiet || { git commit -m "Update seen jobs, job boards, and queue" && git push; }
