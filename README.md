@@ -123,6 +123,15 @@ Go to **Settings → Secrets and variables → Actions**. Or use `gh secret set 
 
 Go to **Actions → daily-job-digest → Run workflow** for a first run. After that it runs every day at 10:00 UTC. To change the time, edit the `cron` line in `.github/workflows/daily.yml`.
 
+GitHub's scheduled runs are best effort and can start hours late. For a run on time, trigger it from an outside scheduler such as [cron-job.org](https://cron-job.org) and delete the `schedule:` block so it doesn't also run twice:
+
+- **URL:** `https://api.github.com/repos/<you>/<your-repo>/actions/workflows/daily.yml/dispatches`
+- **Method:** POST, with body `{"ref":"main"}`
+- **Headers:** `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28`
+- **Token:** a fine-grained personal access token for only this repo, with **Actions: Read and write**
+
+A working call returns **204** and a new run appears under **Actions**.
+
 ## Running locally
 
 Run these from the repo root:
@@ -157,6 +166,7 @@ With the LinkedIn job page check on, most roles are filtered for free, and each 
 | `invalid_grant` from Gmail after a week | The OAuth app was in Testing when you got the token. Publish it and rerun `--auth`. |
 | "0 new jobs" from non-empty alerts | LinkedIn changed its email markup. Save a fresh alert to `fixtures/`, run `--parse-only`, and adjust `AlertParser.cs`. |
 | Pay or closed checks stop working | LinkedIn changed its job page. Run `--linkedin-check` on a few job IDs to see what's no longer read. |
+| The daily run starts hours late or not at all | GitHub delays or skips scheduled runs under load. Trigger it from an outside scheduler instead (see **Run it**). |
 | Workflow can't push `seen.json` | Check the workflow has `contents: write` permission and that branch protection isn't blocking the bot. |
 
 ## Known limits
