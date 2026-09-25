@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace JobHunt;
@@ -32,6 +33,15 @@ public class Matcher(ClaudeClient claude, string resume, string preferencesText,
     // Lowercase, punctuation to spaces, so "Initech Corporation" and "Globex, Inc." match "initech"/"globex".
     static string Normalize(string s) => Regex.Replace(s.ToLowerInvariant(), "[^a-z0-9]+", " ").Trim();
 
+    /// <summary>Whether a location is just one of your countries ("United States" for US), not a city in it.</summary>
+    static bool IsCountryWide(string location, List<string> countries) =>
+        countries.Any(c =>
+        {
+            var code = c.Trim().ToUpperInvariant() is "USA" ? "US" : c.Trim();
+            try { return location.Trim().Equals(new RegionInfo(code).EnglishName, StringComparison.OrdinalIgnoreCase); }
+            catch (ArgumentException) { return false; }
+        });
+
     public static bool IsAgency(AlertJob job, HardRules hard)
     {
         var company = job.Company.ToLowerInvariant();
@@ -44,13 +54,18 @@ public class Matcher(ClaudeClient claude, string resume, string preferencesText,
         var p = role.Posting!;
         if (TitleFilter(role.Job, hard) is { } titleReason) return titleReason;
 
-        // Postings (LinkedIn's especially) often don't say. The alert's "(Remote)" comes from
-        // LinkedIn's workplace-type field, so it's a fair tiebreaker for "unknown".
-        if (p.Remote is null or "unknown" && role.Job.Location.Contains("(Remote)", StringComparison.OrdinalIgnoreCase))
+        // Postings (LinkedIn's especially) often don't say. Then the location is the tiebreaker: an
+        // alert's "(Remote)" comes from LinkedIn's workplace-type field, and LinkedIn lists remote
+        // roles under a whole country ("United States"). A city alone ("Boston, MA") isn't enough:
+        // public search results carry no workplace type, and hybrid roles often don't say so.
+        if (p.Remote is null or "unknown"
+            && (role.Job.Location.Contains("Remote", StringComparison.OrdinalIgnoreCase) || IsCountryWide(role.Job.Location, hard.Countries)))
             p.Remote = "fully_remote";
 
         if (hard.Remote == "fully_remote" && p.Remote != "fully_remote")
-            return $"Not fully remote ({p.Remote ?? "unknown"})";
+            return p.Remote is null or "unknown"
+                ? $"Remote not stated ({role.Job.Location})"
+                : $"Not fully remote ({p.Remote})";
 
         // Filter only when the posting names countries and none of yours are among them ("Canada or US" stays for a US candidate).
         static string Iso(string c) => c.Trim().ToUpperInvariant() is "USA" ? "US" : c.Trim().ToUpperInvariant();

@@ -34,6 +34,10 @@ public static class SelfTest
         Check(Matcher.HardFilter(remoteAlert, hard) is null, "uses the alert's (Remote) when the posting doesn't say");
         var hybridPosting = new JobRole { Job = a with { Location = "Chicago, IL (Remote)" }, Posting = new Posting { Remote = "hybrid", SalaryMax = 200000 } };
         Check(Matcher.HardFilter(hybridPosting, hard) is not null, "posting's own hybrid beats the alert");
+        JobRole Silent(string location) => new() { Job = a with { Location = location }, Posting = new Posting { Remote = "unknown", SalaryMax = 200000 } };
+        Check(Matcher.HardFilter(Silent("Boston, MA"), hard) is { } cityReason && cityReason.StartsWith("Remote not stated"),
+              "drops a city-only location when the posting doesn't say remote");
+        Check(Matcher.HardFilter(Silent("United States"), hard) is null, "treats a country-wide location as remote");
         var companyRules = new HardRules { ExcludeCompanies = ["GitHub", "Microsoft"] };
         Check(Matcher.CompanyFilter(a with { Company = "Microsoft Corporation" }, companyRules) is not null
               && Matcher.CompanyFilter(a with { Company = "GitHub, Inc." }, companyRules) is not null, "drops excluded companies");

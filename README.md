@@ -27,7 +27,7 @@ It never contacts anyone. The only email it sends is the digest, to you.
    - a day-to-day summary;
    - a people-management level;
    - an estimated pay band when none is posted.
-7. **Hard rules.** Your remote rule, `countries`, `home_state`, and pay floor. Unknown pay is kept and tagged. If the pay estimate is below your floor, the role is tagged and sorted last, not dropped.
+7. **Hard rules.** Your remote rule, `countries`, `home_state`, and pay floor. Unknown pay is kept and tagged. If the pay estimate is below your floor, the role is tagged and sorted last, not dropped. When the posting doesn't say whether it's remote, LinkedIn's location decides: "Remote" or a whole country ("United States") counts as remote, and a city alone ("Boston, MA") is filtered as "Remote not stated".
 8. **Digest.** The digest has these sections:
    - **Cards:** every role at or above `min_score`.
    - **Near misses:** roles that scored just under the bar.

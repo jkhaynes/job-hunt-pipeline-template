@@ -34,12 +34,9 @@ public static class LinkedInSearch
             {
                 // f_TPR does work (verified), but enforce the window here too, from the card's own age text.
                 if (!IsWithin(age, rules.PostedWithinHours)) { old++; continue; }
-                // Searched with remote in mind, so mark it the way alert emails do; the remote tiebreaker reads this.
-                jobs.Add(job with
-                {
-                    AlertDate = now,
-                    Location = remoteOnly && !job.Location.Contains("Remote", StringComparison.OrdinalIgnoreCase) ? $"{job.Location} (Remote)" : job.Location,
-                });
+                // Keep LinkedIn's own location. "AND remote" only ranks, so a result isn't known to be remote;
+                // the hard filter decides from the posting, then from this location.
+                jobs.Add(job with { AlertDate = now });
             }
         }
         return new SearchResult(jobs, HitCap: seenResults >= rules.MaxResultsPerSearch, DroppedAsOld: old);
